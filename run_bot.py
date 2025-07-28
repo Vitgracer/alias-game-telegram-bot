@@ -242,9 +242,10 @@ async def start_round(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     game_state['current_round_words'] = round_words_dict
     game_state['current_word_index'] = 0
 
-    await show_next_word(update, context)
     game_state['timer_start_time'] = time.time()
     await start_timer(update, context)
+    await show_next_word(update, context)
+    
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Here we process messages from the user depending on the current state"""
