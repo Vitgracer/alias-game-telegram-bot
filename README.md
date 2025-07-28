@@ -1,2 +1,5 @@
 # alias-game-telegram-bot
-A simple "Alias" for Telegram, available in English and German 
+
+1. python -m venv alias_venv
+   alias_venv/scripts/activate.bat
+2. 
