@@ -2,6 +2,7 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from loaders import load_words
 from config import BOT_TOKEN
 
 # basic logging turned on 
@@ -30,6 +31,39 @@ DEFAULT_GAME_STATE = {
     'total_scores': {} # Final score for each team
 }
 
+async def set_difficulty(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Set up difficulty and suggest to choose the number of teams."""
+    query = update.callback_query
+    await query.answer()
+    chat_id = query.message.chat_id
+    difficulty = query.data.split('_')[2]
+    GAME_STATES[chat_id]['difficulty'] = difficulty
+    GAME_STATES[chat_id]['words'] = load_words(GAME_STATES[chat_id]['language'], difficulty, logger)
+
+    await query.edit_message_text(
+        "Отлично! Теперь введите количество команд (от 2 до 4):"
+    )
+    context.user_data['next_step'] = 'set_num_teams'
+
+async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """ Set langiage and complexity """
+    query = update.callback_query
+    await query.answer()
+    chat_id = query.message.chat_id
+    lang_code = query.data.split('_')[2]
+    GAME_STATES[chat_id]['language'] = lang_code
+
+    keyboard = [
+        [InlineKeyboardButton("Простой", callback_data='set_difficulty_easy')],
+        [InlineKeyboardButton("Средний", callback_data='set_difficulty_medium')],
+        [InlineKeyboardButton("Сложный", callback_data='set_difficulty_hard')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text(
+        f"Вы выбрали {lang_code.upper()} язык. Теперь выберите сложность:",
+        reply_markup=reply_markup
+    )
+
 async def start_game_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """ Set up game configuration """
     query = update.callback_query
@@ -56,7 +90,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
         "Привет! Я бот для игры в Alias. Нажми **Начать новую игру**, чтобы приступить!",
-        reply_markup=reply_markup
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
     )
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -87,6 +122,8 @@ def main() -> None:
     
     # added callbacks 
     application.add_handler(CallbackQueryHandler(start_game_callback, pattern='^start_game$'))
+    application.add_handler(CallbackQueryHandler(set_language, pattern='^set_lang_'))
+    application.add_handler(CallbackQueryHandler(set_difficulty, pattern='^set_difficulty_'))
 
     # run bot 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
