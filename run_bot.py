@@ -1,7 +1,7 @@
 # main.py
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from config import BOT_TOKEN
 
 # basic logging turned on 
@@ -29,6 +29,23 @@ DEFAULT_GAME_STATE = {
     'difficulty': None,
     'total_scores': {} # Final score for each team
 }
+
+async def start_game_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """ Set up game configuration """
+    query = update.callback_query
+    await query.answer()
+    chat_id = query.message.chat_id
+    GAME_STATES[chat_id] = DEFAULT_GAME_STATE.copy() # Сброс состояния игры
+
+    keyboard = [
+        [InlineKeyboardButton("Немецкий", callback_data='set_lang_de')],
+        [InlineKeyboardButton("Английский", callback_data='set_lang_en')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text(
+        "Выберите язык игры:",
+        reply_markup=reply_markup
+    )
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Runs the app and suggest to start the game"""
@@ -68,6 +85,9 @@ def main() -> None:
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("start", start))
     
+    # added callbacks 
+    application.add_handler(CallbackQueryHandler(start_game_callback, pattern='^start_game$'))
+
     # run bot 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
