@@ -1,7 +1,7 @@
-# alias-game-telegram-bot
+# talkfast-game-telegram-bot
 
-1. python -m venv alias_venv
-   alias_venv/scripts/activate.bat
+1. python -m venv talkfast_venv
+   talkfast_venv/scripts/activate.bat
    pip install python-telegram-bot
    pip install "python-telegram-bot[job-queue]
 2. 
