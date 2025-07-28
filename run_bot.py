@@ -21,6 +21,77 @@ logger = logging.getLogger(__name__)
 # Global variable for game state 
 GAME_STATES = {}
 
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Here we process messages from the user depending on the current state"""
+    chat_id = update.effective_chat.id
+    if 'next_step' in context.user_data:
+        step = context.user_data['next_step']
+
+        if step == 'set_num_teams':
+            try:
+                num_teams = int(update.message.text)
+                if 2 <= num_teams <= 4:
+                    GAME_STATES[chat_id]['teams'] = [{'name': f'Команда {i+1}', 'score': 0} for i in range(num_teams)]
+                    GAME_STATES[chat_id]['total_scores'] = {f'Команда {i+1}': 0 for i in range(num_teams)}
+                    await update.message.reply_text(
+                        f"Установлено {num_teams} команды. Теперь введите названия команд по одному сообщению, начиная с первой команды."
+                    )
+                    context.user_data['current_team_naming_index'] = 0
+                    context.user_data['next_step'] = 'set_team_names'
+                else:
+                    await update.message.reply_text("Пожалуйста, введите число от 2 до 4.")
+            except ValueError:
+                await update.message.reply_text("Это не число. Пожалуйста, введите количество команд (от 2 до 4)")
+
+        elif step == 'set_team_names':
+            current_index = context.user_data['current_team_naming_index']
+            team_name = update.message.text.strip()
+            if team_name:
+                GAME_STATES[chat_id]['teams'][current_index]['name'] = team_name
+                GAME_STATES[chat_id]['total_scores'][team_name] = 0
+                context.user_data['current_team_naming_index'] += 1
+
+                if context.user_data['current_team_naming_index'] < len(GAME_STATES[chat_id]['teams']):
+                    await update.message.reply_text(
+                        f"Введите название для {GAME_STATES[chat_id]['teams'][context.user_data['current_team_naming_index']]['name']}:"
+                    )
+                else:
+                    del context.user_data['current_team_naming_index']
+                    await update.message.reply_text(
+                        "Названия команд установлены. Теперь введите длину раунда в секундах (например, 60, 90, 120):"
+                    )
+                    context.user_data['next_step'] = 'set_round_time'
+            else:
+                await update.message.reply_text("Название команды не может быть пустым. Попробуйте еще раз.")
+
+        elif step == 'set_round_time':
+            try:
+                round_time = int(update.message.text)
+                if round_time > 0:
+                    GAME_STATES[chat_id]['round_time'] = round_time
+                    await update.message.reply_text(
+                        "Длина раунда установлена. Теперь введите число объясненных слов для победы:"
+                    )
+                    context.user_data['next_step'] = 'set_words_to_win'
+                else:
+                    await update.message.reply_text("Время раунда должно быть положительным числом. Попробуйте еще раз.")
+            except ValueError:
+                await update.message.reply_text("Это не число. Пожалуйста, введите длину раунда в секундах:")
+
+        elif step == 'set_words_to_win':
+            try:
+                words_to_win = int(update.message.text)
+                if words_to_win > 0:
+                    GAME_STATES[chat_id]['words_to_win'] = words_to_win
+                    del context.user_data['next_step'] # finish game settings 
+                    GAME_STATES[chat_id]['in_game'] = True
+                    await update.message.reply_text("Настройки игры завершены! Начинаем игру.")
+                    #await start_round(update, context)
+                else:
+                    await update.message.reply_text("Число слов для победы должно быть положительным числом. Попробуйте еще раз.")
+            except ValueError:
+                await update.message.reply_text("Это не число. Пожалуйста, введите число объясненных слов для победы:")
+
 async def set_difficulty(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Set up difficulty and suggest to choose the number of teams."""
     query = update.callback_query
@@ -79,7 +150,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = [[InlineKeyboardButton("Начать новую игру", callback_data='start_game')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        "Привет! Я бот для игры в Alias. Нажми **Начать новую игру**, чтобы приступить!",
+        "Привет! Я бот для игры в Alias. Нажми НАЧАТЬ НОВУЮ ИГРУ, чтобы приступить!",
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
@@ -116,7 +187,7 @@ def main() -> None:
     application.add_handler(CallbackQueryHandler(set_difficulty, pattern='^set_difficulty_'))
 
     # user input processing (text)
-    #application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     # run bot 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
