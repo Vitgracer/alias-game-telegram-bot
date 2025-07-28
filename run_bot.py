@@ -376,7 +376,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = [[InlineKeyboardButton("Начать новую игру", callback_data='start_game')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        "Привет! Я бот для игры в Alias. Нажми НАЧАТЬ НОВУЮ ИГРУ, чтобы приступить!",
+        "Привет! Я бот для игры в TalkFast. Нажми НАЧАТЬ НОВУЮ ИГРУ, чтобы приступить!",
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
@@ -386,7 +386,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     help_text = (
         "**Доступные команды:**\n"
-        "/start - Начать новую игру Alias.\n"
+        "/start - Начать новую игру TalkFast.\n"
         "/cancel - Отменить текущую игру.\n"
         "/help - Показать это сообщение помощи.\n\n"
         "**Как играть:**\n"
