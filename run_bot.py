@@ -1,3 +1,5 @@
+import time
+import random 
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -20,6 +22,229 @@ logger = logging.getLogger(__name__)
 
 # Global variable for game state 
 GAME_STATES = {}
+
+async def start_next_round_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+    await query.delete_message() # remove previos button
+    await start_round(update, context)
+
+async def show_final_scores(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = update.effective_chat.id
+    game_state = GAME_STATES[chat_id]
+
+    scores_text = "--- **Финальный счет** ---\n"
+    for team_name, score in game_state['total_scores'].items():
+        scores_text += f"**{team_name}**: {score} очков\n"
+    scores_text += "-----------------------\n"
+
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=scores_text,
+        parse_mode='Markdown'
+    )
+    # clean the state 
+    GAME_STATES[chat_id] = DEFAULT_GAME_STATE.copy()
+
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        chat_id = update.effective_chat.id
+        GAME_STATES[chat_id] = DEFAULT_GAME_STATE.copy()
+        await update.message.reply_text(
+            "Игра отменена. Вы можете начать новую игру, используя /start."
+    )
+
+async def end_round(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id: int = None) -> None:
+    """ Finish round and move to the next one """
+    if chat_id is None: # If call not fron the force function 
+        chat_id = update.effective_chat.id
+
+    game_state = GAME_STATES[chat_id]
+
+    if not game_state['in_game']:
+        return 
+
+    current_team = game_state['teams'][game_state['current_team_index']]
+    score_this_round = game_state['explained_words_count']
+
+    current_team['score'] += score_this_round
+    game_state['total_scores'][current_team['name']] += score_this_round
+
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=f"Раунд для **{current_team['name']}** завершен!\n"
+             f"Объяснено слов: {game_state['explained_words_count']}\n"
+             f"Пропущено слов: {game_state['skipped_words_count']}\n"
+             f"Очки за раунд: {score_this_round}\n"
+             f"Общий счет команды **{current_team['name']}**: {current_team['score']}\n\n",
+        parse_mode='Markdown'
+    )
+
+    # win? 
+    max_score = 0
+    winning_team = None
+    for team in game_state['teams']:
+        if team['score'] >= game_state['words_to_win']:
+            game_state['in_game'] = False # game is finished 
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=f"**ПОБЕДА!** Команда **{team['name']}** достигла {team['score']} очков и выиграла игру!",
+                parse_mode='Markdown'
+            )
+            await show_final_scores(update, context)
+            return
+
+    # To the next team 
+    game_state['current_team_index'] = (game_state['current_team_index'] + 1) % len(game_state['teams'])
+
+    # next round? 
+    keyboard = [[InlineKeyboardButton("Начать следующий раунд", callback_data='start_next_round')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=f"Приготовьтесь, следующий ход команды: **{game_state['teams'][game_state['current_team_index']]['name']}**",
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
+    )
+
+
+async def handle_word_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """ Process the word: skip or accept """
+    query = update.callback_query
+    await query.answer()
+    chat_id = query.message.chat_id
+    game_state = GAME_STATES[chat_id]
+
+    if not game_state['in_game']:
+        await query.edit_message_text("Игра не активна.")
+        return
+
+    action = query.data
+
+    if action == 'word_explained':
+        game_state['explained_words_count'] += 1
+    elif action == 'word_skipped':
+        game_state['skipped_words_count'] += 1
+
+    game_state['current_word_index'] += 1
+
+    # remove previous word 
+    try:
+        await query.delete_message()
+    except Exception as e:
+        logger.warning(f"Не удалось удалить сообщение: {e}")
+
+    # do we have time? 
+    elapsed_time = time.time() - game_state['timer_start_time']
+    if elapsed_time < game_state['round_time']:
+        await show_next_word(update, context)
+    else:
+        await end_round(update, context)
+
+async def end_round_force(chat_id: int, context: ContextTypes.DEFAULT_TYPE) -> None:
+    game_state = GAME_STATES[chat_id]
+    if game_state['in_game']:
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="Время вышло!"
+        )
+        await end_round(None, context, chat_id=chat_id)
+
+async def update_timer(context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = context.job.chat_id
+    message_id = context.job.data
+    game_state = GAME_STATES[chat_id]
+
+    if not game_state['in_game']:
+        context.job.schedule_removal()
+        return # If game is not active, stop timer 
+
+    elapsed_time = time.time() - game_state['timer_start_time']
+    remaining_time = int(game_state['round_time'] - elapsed_time)
+
+    if remaining_time > 0:
+        try:
+            await context.bot.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=f"Осталось: {remaining_time} секунд"
+            )
+        except Exception as e:
+            logger.warning(f"Ошибка при обновлении сообщения таймера: {e}")
+            context.job.schedule_removal()
+            await end_round_force(chat_id, context)
+    else:
+        context.job.schedule_removal()
+        await end_round_force(chat_id, context)
+
+async def start_timer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """ Run round timer """
+    chat_id = update.effective_chat.id
+    game_state = GAME_STATES[chat_id]
+
+    # first timer message
+    timer_message = await context.bot.send_message(
+        chat_id=chat_id,
+        text=f"Осталось: {game_state['round_time']} секунд"
+    )
+    game_state['round_timer_message_id'] = timer_message.message_id
+
+    # update timer
+    context.application.job_queue.run_repeating(
+        callback=update_timer,
+        interval=1,
+        first=1,
+        chat_id=chat_id,
+        name=f"timer_{chat_id}",
+        data=timer_message.message_id
+    )
+
+async def show_next_word(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = update.effective_chat.id
+    game_state = GAME_STATES[chat_id]
+
+    word = list(game_state['current_round_words'].keys())[game_state['current_word_index']]
+    translate = game_state['current_round_words'][word]
+    keyboard = [
+        [InlineKeyboardButton("✅ Понял", callback_data='word_explained')],
+        [InlineKeyboardButton("❌ Пропустить", callback_data='word_skipped')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=f"**{word}** ({translate})",
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
+    )
+
+async def start_round(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """ New round start! """
+    chat_id = update.effective_chat.id
+    game_state = GAME_STATES[chat_id]
+
+    if not game_state['in_game']:
+        await update.message.reply_text("Игра еще не началась. Используйте /start.")
+        return
+
+    current_team = game_state['teams'][game_state['current_team_index']]
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=f"Начинается раунд для команды: **{current_team['name']}**!\n"
+             f"У вас {game_state['round_time']} секунд. Приготовьтесь!",
+        parse_mode='Markdown'
+    )
+
+    # current round status is set to zero 
+    game_state['explained_words_count'] = 0
+    game_state['skipped_words_count'] = 0
+    all_words = list(game_state['words'].keys())
+    sampled_words = random.sample(all_words, k=min(len(all_words), 50))
+    round_words_dict = {k: game_state['words'][k] for k in sampled_words}
+    game_state['current_round_words'] = round_words_dict
+    game_state['current_word_index'] = 0
+
+    await show_next_word(update, context)
+    game_state['timer_start_time'] = time.time()
+    await start_timer(update, context)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Here we process messages from the user depending on the current state"""
@@ -86,7 +311,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     del context.user_data['next_step'] # finish game settings 
                     GAME_STATES[chat_id]['in_game'] = True
                     await update.message.reply_text("Настройки игры завершены! Начинаем игру.")
-                    #await start_round(update, context)
+                    await start_round(update, context)
                 else:
                     await update.message.reply_text("Число слов для победы должно быть положительным числом. Попробуйте еще раз.")
             except ValueError:
@@ -180,11 +405,14 @@ def main() -> None:
     # commands processing 
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("cancel", cancel))
     
     # buttons processing 
     application.add_handler(CallbackQueryHandler(start_game_callback, pattern='^start_game$'))
     application.add_handler(CallbackQueryHandler(set_language, pattern='^set_lang_'))
     application.add_handler(CallbackQueryHandler(set_difficulty, pattern='^set_difficulty_'))
+    application.add_handler(CallbackQueryHandler(handle_word_action, pattern='^word_'))
+    application.add_handler(CallbackQueryHandler(start_next_round_callback, pattern='^start_next_round$'))
 
     # user input processing (text)
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
