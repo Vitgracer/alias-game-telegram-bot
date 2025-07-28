@@ -1,8 +1,15 @@
-# main.py
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
-from loaders import load_words
+from telegram.ext import (
+    Application, 
+    CommandHandler, 
+    MessageHandler, 
+    CallbackQueryHandler, 
+    ContextTypes, 
+    filters
+)
+from data.loaders import load_words
+from game.state import DEFAULT_GAME_STATE
 from config import BOT_TOKEN
 
 # basic logging turned on 
@@ -13,23 +20,6 @@ logger = logging.getLogger(__name__)
 
 # Global variable for game state 
 GAME_STATES = {}
-
-DEFAULT_GAME_STATE = {
-    'in_game': False,
-    'language': None,
-    'teams': [],
-    'current_team_index': 0,
-    'round_time': 60, # seconds
-    'words_to_win': 15,
-    'current_round_words': [],
-    'explained_words_count': 0,
-    'skipped_words_count': 0,
-    'current_word_index': 0,
-    'round_timer_message_id': None,
-    'timer_start_time': None,
-    'difficulty': None,
-    'total_scores': {} # Final score for each team
-}
 
 async def set_difficulty(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Set up difficulty and suggest to choose the number of teams."""
@@ -116,14 +106,17 @@ def main() -> None:
     # create basic application
     application = Application.builder().token(BOT_TOKEN).build()
 
-    # add basic commands 
+    # commands processing 
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("start", start))
     
-    # added callbacks 
+    # buttons processing 
     application.add_handler(CallbackQueryHandler(start_game_callback, pattern='^start_game$'))
     application.add_handler(CallbackQueryHandler(set_language, pattern='^set_lang_'))
     application.add_handler(CallbackQueryHandler(set_difficulty, pattern='^set_difficulty_'))
+
+    # user input processing (text)
+    #application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     # run bot 
     application.run_polling(allowed_updates=Update.ALL_TYPES)

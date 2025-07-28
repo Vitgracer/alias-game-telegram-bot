@@ -2,3 +2,5 @@ config.py
 helper.py
 __pycache__/config.cpython-310.pyc
 __pycache__/loaders.cpython-310.pyc
+data/__pycache__/loaders.cpython-310.pyc
+game/__pycache__/state.cpython-310.pyc
