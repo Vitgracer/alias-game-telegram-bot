@@ -1,6 +1,6 @@
 # main.py
 import logging
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes
 from config import BOT_TOKEN
 
@@ -12,6 +12,35 @@ logger = logging.getLogger(__name__)
 
 # Global variable for game state 
 GAME_STATES = {}
+
+DEFAULT_GAME_STATE = {
+    'in_game': False,
+    'language': None,
+    'teams': [],
+    'current_team_index': 0,
+    'round_time': 60, # seconds
+    'words_to_win': 15,
+    'current_round_words': [],
+    'explained_words_count': 0,
+    'skipped_words_count': 0,
+    'current_word_index': 0,
+    'round_timer_message_id': None,
+    'timer_start_time': None,
+    'difficulty': None,
+    'total_scores': {} # Final score for each team
+}
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Runs the app and suggest to start the game"""
+    chat_id = update.effective_chat.id
+    GAME_STATES[chat_id] = DEFAULT_GAME_STATE.copy()
+
+    keyboard = [[InlineKeyboardButton("Начать новую игру", callback_data='start_game')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        "Привет! Я бот для игры в Alias. Нажми **Начать новую игру**, чтобы приступить!",
+        reply_markup=reply_markup
+    )
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """ Showed how to play the game """
@@ -32,10 +61,12 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await update.message.reply_text(help_text, parse_mode='Markdown')
 
 def main() -> None:
+    # create basic application
     application = Application.builder().token(BOT_TOKEN).build()
 
     # add basic commands 
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("start", start))
     
     # run bot 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
