@@ -10,15 +10,15 @@ from telegram.ext import (
     filters
 )
 from game.help import help_command
-from game.state import DEFAULT_GAME_STATE
+from game.state import (
+    DEFAULT_GAME_STATE,
+    GAME_STATES
+)
 from game.settings import set_default_commands
 from data.loaders import load_words
 from utils.logger import LOGGER
 from config import BOT_TOKEN
 
-
-# Global variable for game state 
-GAME_STATES = {}
 
 async def start_next_round_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query

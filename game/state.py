@@ -14,3 +14,6 @@ DEFAULT_GAME_STATE = {
     'difficulty': None,
     'total_scores': {} # Final score for each team
 }
+
+# Global variable for game state 
+GAME_STATES = {}
