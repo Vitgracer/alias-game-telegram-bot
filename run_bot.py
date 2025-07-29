@@ -1,6 +1,5 @@
 import time
 import random 
-import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, 
@@ -11,16 +10,12 @@ from telegram.ext import (
     filters
 )
 from game.help import help_command
-from data.loaders import load_words
 from game.state import DEFAULT_GAME_STATE
+from game.settings import set_default_commands
+from data.loaders import load_words
+from utils.logger import LOGGER
 from config import BOT_TOKEN
 
-
-# basic logging turned on 
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
-)
-logger = logging.getLogger(__name__)
 
 # Global variable for game state 
 GAME_STATES = {}
@@ -131,7 +126,7 @@ async def handle_word_action(update: Update, context: ContextTypes.DEFAULT_TYPE)
     try:
         await query.delete_message()
     except Exception as e:
-        logger.warning(f"Impossible to delete the message. {e}")
+        LOGGER.warning(f"Impossible to delete the message. {e}")
 
     # do we have time? 
     elapsed_time = time.time() - game_state['timer_start_time']
@@ -169,7 +164,7 @@ async def update_timer(context: ContextTypes.DEFAULT_TYPE) -> None:
                 text=f"{remaining_time} seconds left"
             )
         except Exception as e:
-            logger.warning(f"Error while updating the timer message: {e}")
+            LOGGER.warning(f"Error while updating the timer message: {e}")
             context.job.schedule_removal()
             await end_round_force(chat_id, context)
     else:
@@ -325,7 +320,7 @@ async def set_difficulty(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     chat_id = query.message.chat_id
     difficulty = query.data.split('_')[2]
     GAME_STATES[chat_id]['difficulty'] = difficulty
-    GAME_STATES[chat_id]['words'] = load_words(GAME_STATES[chat_id]['language'], difficulty, logger)
+    GAME_STATES[chat_id]['words'] = load_words(GAME_STATES[chat_id]['language'], difficulty, LOGGER)
 
     await query.edit_message_text(
         "Great! Now enter the number of teams (from 2 to 4):"
@@ -380,15 +375,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
-
-async def set_default_commands(application: Application):
-    commands = [
-        ("start", "Start a new game"),
-        ("cancel", "Cancel the current game"),
-        ("help", "Show a help message")
-    ]
-    await application.bot.set_my_commands(commands)
-    logger.info("Start bots commands are set up!")
 
 def main() -> None:
     # create basic application
