@@ -397,9 +397,19 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 )
     await update.message.reply_text(help_text, parse_mode='Markdown')
 
+async def set_default_commands(application: Application):
+    commands = [
+        ("start", "Start a new game"),
+        ("cancel", "Cancel the current game"),
+        ("help", "Show a help message")
+    ]
+    await application.bot.set_my_commands(commands)
+    logger.info("Start bots commands are set up!")
+
 def main() -> None:
     # create basic application
     application = Application.builder().token(BOT_TOKEN).build()
+    application.job_queue.run_once(set_default_commands, 0)
 
     # commands processing 
     application.add_handler(CommandHandler("help", help_command))
