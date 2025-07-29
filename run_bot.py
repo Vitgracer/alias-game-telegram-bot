@@ -26,8 +26,12 @@ async def start_next_round_callback(update: Update, context: ContextTypes.DEFAUL
     await query.delete_message() # remove previos button
     await start_round(update, context)
 
-async def show_final_scores(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat_id = update.effective_chat.id
+async def show_final_scores(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id: int = None) -> None:
+    if update and update.effective_chat:
+        chat_id = update.effective_chat.id
+    elif chat_id is None:
+        raise ValueError("No chat_id provided to show_final_scores")
+
     game_state = GAME_STATES[chat_id]
 
     scores_text = "--- **Final Score** ---\n"
@@ -85,7 +89,7 @@ async def end_round(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id:
                 text=f"**WIN!!!** Team **{team['name']}** achieved {team['score']} points and won!",
                 parse_mode='Markdown'
             )
-            await show_final_scores(update, context)
+            await show_final_scores(update, context, chat_id)
             return
 
     # To the next team 
