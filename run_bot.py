@@ -33,9 +33,9 @@ async def show_final_scores(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     chat_id = update.effective_chat.id
     game_state = GAME_STATES[chat_id]
 
-    scores_text = "--- **Финальный счет** ---\n"
+    scores_text = "--- **Final Score** ---\n"
     for team_name, score in game_state['total_scores'].items():
-        scores_text += f"**{team_name}**: {score} очков\n"
+        scores_text += f"**{team_name}**: {score} points\n"
     scores_text += "-----------------------\n"
 
     await context.bot.send_message(
@@ -50,7 +50,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         chat_id = update.effective_chat.id
         GAME_STATES[chat_id] = DEFAULT_GAME_STATE.copy()
         await update.message.reply_text(
-            "Игра отменена. Вы можете начать новую игру, используя /start."
+            "Game canceled. You can start a new game with /start."
     )
 
 async def end_round(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id: int = None) -> None:
@@ -71,23 +71,21 @@ async def end_round(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id:
 
     await context.bot.send_message(
         chat_id=chat_id,
-        text=f"Раунд для **{current_team['name']}** завершен!\n"
-             f"Объяснено слов: {game_state['explained_words_count']}\n"
-             f"Пропущено слов: {game_state['skipped_words_count']}\n"
-             f"Очки за раунд: {score_this_round}\n"
-             f"Общий счет команды **{current_team['name']}**: {current_team['score']}\n\n",
+        text=f"Round for **{current_team['name']}** is over!\n"
+             f"Words explained: {game_state['explained_words_count']}\n"
+             f"Words skipped: {game_state['skipped_words_count']}\n"
+             f"Points this round: {score_this_round}\n"
+             f"Total score for team **{current_team['name']}**: {current_team['score']}\n\n",
         parse_mode='Markdown'
     )
 
     # win? 
-    max_score = 0
-    winning_team = None
     for team in game_state['teams']:
         if team['score'] >= game_state['words_to_win']:
             game_state['in_game'] = False # game is finished 
             await context.bot.send_message(
                 chat_id=chat_id,
-                text=f"**ПОБЕДА!** Команда **{team['name']}** достигла {team['score']} очков и выиграла игру!",
+                text=f"**WIN!!!** Team **{team['name']}** achieved {team['score']} points and won!",
                 parse_mode='Markdown'
             )
             await show_final_scores(update, context)
@@ -97,11 +95,11 @@ async def end_round(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id:
     game_state['current_team_index'] = (game_state['current_team_index'] + 1) % len(game_state['teams'])
 
     # next round? 
-    keyboard = [[InlineKeyboardButton("Начать следующий раунд", callback_data='start_next_round')]]
+    keyboard = [[InlineKeyboardButton("Start the next round", callback_data='start_next_round')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await context.bot.send_message(
         chat_id=chat_id,
-        text=f"Приготовьтесь, следующий ход команды: **{game_state['teams'][game_state['current_team_index']]['name']}**",
+        text=f"Get ready, it's the next turn for team: **{game_state['teams'][game_state['current_team_index']]['name']}**",
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
@@ -115,7 +113,7 @@ async def handle_word_action(update: Update, context: ContextTypes.DEFAULT_TYPE)
     game_state = GAME_STATES[chat_id]
 
     if not game_state['in_game']:
-        await query.edit_message_text("Игра не активна.")
+        await query.edit_message_text("Game is not active.")
         return
 
     action = query.data
@@ -131,7 +129,7 @@ async def handle_word_action(update: Update, context: ContextTypes.DEFAULT_TYPE)
     try:
         await query.delete_message()
     except Exception as e:
-        logger.warning(f"Не удалось удалить сообщение: {e}")
+        logger.warning(f"Impossible to delete the message. {e}")
 
     # do we have time? 
     elapsed_time = time.time() - game_state['timer_start_time']
@@ -145,7 +143,7 @@ async def end_round_force(chat_id: int, context: ContextTypes.DEFAULT_TYPE) -> N
     if game_state['in_game']:
         await context.bot.send_message(
             chat_id=chat_id,
-            text="Время вышло!"
+            text="Time's up!"
         )
         await end_round(None, context, chat_id=chat_id)
 
@@ -166,10 +164,10 @@ async def update_timer(context: ContextTypes.DEFAULT_TYPE) -> None:
             await context.bot.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
-                text=f"Осталось: {remaining_time} секунд"
+                text=f"{remaining_time} seconds left"
             )
         except Exception as e:
-            logger.warning(f"Ошибка при обновлении сообщения таймера: {e}")
+            logger.warning(f"Error while updating the timer message: {e}")
             context.job.schedule_removal()
             await end_round_force(chat_id, context)
     else:
@@ -184,7 +182,7 @@ async def start_timer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     # first timer message
     timer_message = await context.bot.send_message(
         chat_id=chat_id,
-        text=f"Осталось: {game_state['round_time']} секунд"
+        text=f"{game_state['round_time']} seconds left"
     )
     game_state['round_timer_message_id'] = timer_message.message_id
 
@@ -205,8 +203,8 @@ async def show_next_word(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     word = list(game_state['current_round_words'].keys())[game_state['current_word_index']]
     translate = game_state['current_round_words'][word]
     keyboard = [
-        [InlineKeyboardButton("✅ Понял", callback_data='word_explained')],
-        [InlineKeyboardButton("❌ Пропустить", callback_data='word_skipped')]
+        [InlineKeyboardButton("✅ Understood", callback_data='word_explained')],
+        [InlineKeyboardButton("❌ Skip", callback_data='word_skipped')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await context.bot.send_message(
@@ -222,14 +220,14 @@ async def start_round(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     game_state = GAME_STATES[chat_id]
 
     if not game_state['in_game']:
-        await update.message.reply_text("Игра еще не началась. Используйте /start.")
+        await update.message.reply_text("The game hasn't started yet. Use /start to begin.")
         return
 
     current_team = game_state['teams'][game_state['current_team_index']]
     await context.bot.send_message(
         chat_id=chat_id,
-        text=f"Начинается раунд для команды: **{current_team['name']}**!\n"
-             f"У вас {game_state['round_time']} секунд. Приготовьтесь!",
+        text=f"The round for team **{current_team['name']}** is starting!\n"
+             f"You have {game_state['round_time']} seconds. Get ready!",
         parse_mode='Markdown'
     )
 
@@ -257,17 +255,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             try:
                 num_teams = int(update.message.text)
                 if 2 <= num_teams <= 4:
-                    GAME_STATES[chat_id]['teams'] = [{'name': f'Команда {i+1}', 'score': 0} for i in range(num_teams)]
-                    GAME_STATES[chat_id]['total_scores'] = {f'Команда {i+1}': 0 for i in range(num_teams)}
+                    GAME_STATES[chat_id]['teams'] = [{'name': f'Team {i+1}', 'score': 0} for i in range(num_teams)]
+                    GAME_STATES[chat_id]['total_scores'] = {f'Team {i+1}': 0 for i in range(num_teams)}
                     await update.message.reply_text(
-                        f"Установлено {num_teams} команды. Теперь введите названия команд по одному сообщению, начиная с первой команды."
+                        f"{num_teams} teams set. Now enter team names one by one, starting with the first team."
                     )
                     context.user_data['current_team_naming_index'] = 0
                     context.user_data['next_step'] = 'set_team_names'
                 else:
-                    await update.message.reply_text("Пожалуйста, введите число от 2 до 4.")
+                    await update.message.reply_text("Please enter a number between 2 and 4.")
             except ValueError:
-                await update.message.reply_text("Это не число. Пожалуйста, введите количество команд (от 2 до 4)")
+                await update.message.reply_text("That's not a number. Please enter the number of teams (2 to 4).")
 
         elif step == 'set_team_names':
             current_index = context.user_data['current_team_naming_index']
@@ -279,16 +277,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
                 if context.user_data['current_team_naming_index'] < len(GAME_STATES[chat_id]['teams']):
                     await update.message.reply_text(
-                        f"Введите название для {GAME_STATES[chat_id]['teams'][context.user_data['current_team_naming_index']]['name']}:"
+                        f"Enter the name for {GAME_STATES[chat_id]['teams'][context.user_data['current_team_naming_index']]['name']}:"
                     )
                 else:
                     del context.user_data['current_team_naming_index']
                     await update.message.reply_text(
-                        "Названия команд установлены. Теперь введите длину раунда в секундах (например, 60, 90, 120):"
+                        "Team names are set. Now enter the round duration in seconds (for example, 60, 90, 120):"
                     )
                     context.user_data['next_step'] = 'set_round_time'
             else:
-                await update.message.reply_text("Название команды не может быть пустым. Попробуйте еще раз.")
+                await update.message.reply_text("The team name cannot be empty. Please try again.")
 
         elif step == 'set_round_time':
             try:
@@ -296,13 +294,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 if round_time > 0:
                     GAME_STATES[chat_id]['round_time'] = round_time
                     await update.message.reply_text(
-                        "Длина раунда установлена. Теперь введите число объясненных слов для победы:"
+                        "The round duration is set. Now enter the number of explained words needed to win:"
                     )
                     context.user_data['next_step'] = 'set_words_to_win'
                 else:
-                    await update.message.reply_text("Время раунда должно быть положительным числом. Попробуйте еще раз.")
+                    await update.message.reply_text("The round time must be a positive number. Please try again.")
             except ValueError:
-                await update.message.reply_text("Это не число. Пожалуйста, введите длину раунда в секундах:")
+                await update.message.reply_text("This is not a number. Please enter the round duration in seconds:")
 
         elif step == 'set_words_to_win':
             try:
@@ -311,12 +309,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     GAME_STATES[chat_id]['words_to_win'] = words_to_win
                     del context.user_data['next_step'] # finish game settings 
                     GAME_STATES[chat_id]['in_game'] = True
-                    await update.message.reply_text("Настройки игры завершены! Начинаем игру.")
+                    await update.message.reply_text("Game settings are complete! Let's start the game.")
                     await start_round(update, context)
                 else:
-                    await update.message.reply_text("Число слов для победы должно быть положительным числом. Попробуйте еще раз.")
+                    await update.message.reply_text("The number of words needed to win must be a positive number. Please try again.")
             except ValueError:
-                await update.message.reply_text("Это не число. Пожалуйста, введите число объясненных слов для победы:")
+                await update.message.reply_text("This is not a number. Please enter the number of explained words needed to win:")
 
 async def set_difficulty(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Set up difficulty and suggest to choose the number of teams."""
@@ -328,7 +326,7 @@ async def set_difficulty(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     GAME_STATES[chat_id]['words'] = load_words(GAME_STATES[chat_id]['language'], difficulty, logger)
 
     await query.edit_message_text(
-        "Отлично! Теперь введите количество команд (от 2 до 4):"
+        "Great! Now enter the number of teams (from 2 to 4):"
     )
     context.user_data['next_step'] = 'set_num_teams'
 
@@ -341,13 +339,13 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     GAME_STATES[chat_id]['language'] = lang_code
 
     keyboard = [
-        [InlineKeyboardButton("Простой", callback_data='set_difficulty_easy')],
-        [InlineKeyboardButton("Средний", callback_data='set_difficulty_medium')],
-        [InlineKeyboardButton("Сложный", callback_data='set_difficulty_hard')]
+        [InlineKeyboardButton("Easy", callback_data='set_difficulty_easy')],
+        [InlineKeyboardButton("Medium", callback_data='set_difficulty_medium')],
+        [InlineKeyboardButton("Hard", callback_data='set_difficulty_hard')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text(
-        f"Вы выбрали {lang_code.upper()} язык. Теперь выберите сложность:",
+        f"You have chosen the {lang_code.upper()} language. Now select the difficulty level:",
         reply_markup=reply_markup
     )
 
@@ -356,15 +354,15 @@ async def start_game_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     query = update.callback_query
     await query.answer()
     chat_id = query.message.chat_id
-    GAME_STATES[chat_id] = DEFAULT_GAME_STATE.copy() # Сброс состояния игры
+    GAME_STATES[chat_id] = DEFAULT_GAME_STATE.copy()
 
     keyboard = [
-        [InlineKeyboardButton("Немецкий", callback_data='set_lang_de')],
-        [InlineKeyboardButton("Английский", callback_data='set_lang_en')]
+        [InlineKeyboardButton("Deutsch", callback_data='set_lang_de')],
+        [InlineKeyboardButton("English", callback_data='set_lang_en')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text(
-        "Выберите язык игры:",
+        "Choose the game language:",
         reply_markup=reply_markup
     )
 
@@ -373,10 +371,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_chat.id
     GAME_STATES[chat_id] = DEFAULT_GAME_STATE.copy()
 
-    keyboard = [[InlineKeyboardButton("Начать новую игру", callback_data='start_game')]]
+    keyboard = [[InlineKeyboardButton("Start a new game", callback_data='start_game')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        "Привет! Я бот для игры в TalkFast. Нажми НАЧАТЬ НОВУЮ ИГРУ, чтобы приступить!",
+        "Hi! I'm a bot for playing TalkFast. Click START NEW GAME to get started!",
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
@@ -385,18 +383,18 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     """ Showed how to play the game """
 
     help_text = (
-        "**Доступные команды:**\n"
-        "/start - Начать новую игру TalkFast.\n"
-        "/cancel - Отменить текущую игру.\n"
-        "/help - Показать это сообщение помощи.\n\n"
-        "**Как играть:**\n"
-        "1. Запустите игру с помощью /start.\n"
-        "2. Выберите язык и сложность.\n"
-        "3. Введите количество команд и их названия.\n"
-        "4. Установите длину раунда и количество слов для победы.\n"
-        "5. Во время раунда объясняйте слова. Нажимайте ✅, если слово объяснено, ❌, если пропущено.\n"
-        "6. Игра заканчивается, когда команда набирает заданное количество слов.\n"
-    )
+    "**Available commands:**\n"
+    "/start - Start a new TalkFast game.\n"
+    "/cancel - Cancel the current game.\n"
+    "/help - Show this help message.\n\n"
+    "**How to play:**\n"
+    "1. Start the game using /start.\n"
+    "2. Choose the language and difficulty.\n"
+    "3. Enter the number of teams and their names.\n"
+    "4. Set the round duration and the number of words needed to win.\n"
+    "5. During the round, explain words. Press ✅ if the word is explained, ❌ if skipped.\n"
+    "6. The game ends when a team reaches the set number of words.\n"
+)
     await update.message.reply_text(help_text, parse_mode='Markdown')
 
 def main() -> None:
