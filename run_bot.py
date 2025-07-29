@@ -1,5 +1,6 @@
 import time
 import random 
+from telegram.constants import ParseMode
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, 
@@ -340,13 +341,14 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     GAME_STATES[chat_id]['language'] = lang_code
 
     keyboard = [
-        [InlineKeyboardButton("Easy", callback_data='set_difficulty_easy')],
-        [InlineKeyboardButton("Medium", callback_data='set_difficulty_medium')],
-        [InlineKeyboardButton("Hard", callback_data='set_difficulty_hard')]
+        [InlineKeyboardButton("🟢 Easy", callback_data='set_difficulty_easy')],
+        [InlineKeyboardButton("🟠 Medium", callback_data='set_difficulty_medium')],
+        [InlineKeyboardButton("🔴 Hard", callback_data='set_difficulty_hard')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text(
-        f"You have chosen the {lang_code.upper()} language. Now select the difficulty level:",
+        f"✅ You have chosen the {lang_code.upper()} language.\n"
+        "🎯 Now select the difficulty level:",
         reply_markup=reply_markup
     )
 
@@ -358,13 +360,14 @@ async def start_game_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     GAME_STATES[chat_id] = DEFAULT_GAME_STATE.copy()
 
     keyboard = [
-        [InlineKeyboardButton("Deutsch", callback_data='set_lang_de')],
-        [InlineKeyboardButton("English", callback_data='set_lang_en')]
+        [InlineKeyboardButton("🇩🇪 Deutsch", callback_data='set_lang_de')],
+        [InlineKeyboardButton("🇬🇧 English", callback_data='set_lang_en')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text(
-        "Choose the game language:",
-        reply_markup=reply_markup
+        "🌐 *Choose the game language*:",
+        reply_markup=reply_markup,
+        parse_mode=ParseMode.MARKDOWN_V2
     )
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -375,9 +378,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = [[InlineKeyboardButton("Start a new game", callback_data='start_game')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        "Hi! I'm a bot for playing TalkFast. Click START NEW GAME to get started!",
+        "👋 Hi\\! I'm a bot for playing *TalkFast* 🎉\n\n"
+        "Click *START NEW GAME* 🔄 to get started\\!",
         reply_markup=reply_markup,
-        parse_mode='Markdown'
+        parse_mode=ParseMode.MARKDOWN_V2
     )
 
 def main() -> None:
