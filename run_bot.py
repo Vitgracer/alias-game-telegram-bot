@@ -258,16 +258,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 num_teams = int(update.message.text)
                 if 2 <= num_teams <= 4:
                     GAME_STATES[chat_id]['teams'] = [{'name': f'Team {i+1}', 'score': 0} for i in range(num_teams)]
-                    GAME_STATES[chat_id]['total_scores'] = {f'Team {i+1}': 0 for i in range(num_teams)}
                     await update.message.reply_text(
-                        f"{num_teams} teams set. Now enter team names one by one, starting with the first team."
+                        f"✅ *{num_teams} teams* set\\.\n" \
+                         "Now enter team names one by one, starting with the *first team*\\.",
+                        parse_mode=ParseMode.MARKDOWN_V2
                     )
                     context.user_data['current_team_naming_index'] = 0
                     context.user_data['next_step'] = 'set_team_names'
                 else:
                     await update.message.reply_text("🚫 Please enter a number between 2 and 4.")
             except ValueError:
-                await update.message.reply_text("🚫 That's not a number. Try again!")
+                await update.message.reply_text("🚫 That's not a number. Try again:")
 
         elif step == 'set_team_names':
             current_index = context.user_data['current_team_naming_index']
@@ -279,12 +280,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
                 if context.user_data['current_team_naming_index'] < len(GAME_STATES[chat_id]['teams']):
                     await update.message.reply_text(
-                        f"Enter the name for {GAME_STATES[chat_id]['teams'][context.user_data['current_team_naming_index']]['name']}:"
+                        f"✏️ Enter the name for the next team:"
                     )
                 else:
                     del context.user_data['current_team_naming_index']
                     await update.message.reply_text(
-                        "Team names are set. Now enter the round duration in seconds (for example, 60, 90, 120):"
+                        "🕗 Now enter the round duration in seconds:"
                     )
                     context.user_data['next_step'] = 'set_round_time'
             else:
@@ -296,13 +297,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 if round_time > 0:
                     GAME_STATES[chat_id]['round_time'] = round_time
                     await update.message.reply_text(
-                        "The round duration is set. Now enter the number of explained words needed to win:"
+                        "🔢 Enter the number of explained words needed to win:"
                     )
                     context.user_data['next_step'] = 'set_words_to_win'
                 else:
-                    await update.message.reply_text("The round time must be a positive number. Please try again.")
+                    await update.message.reply_text("🚫 The round time must be a positive number. Try again:")
             except ValueError:
-                await update.message.reply_text("This is not a number. Please enter the round duration in seconds:")
+                await update.message.reply_text("🚫 This is not a number. Please enter the round duration in seconds:")
 
         elif step == 'set_words_to_win':
             try:
@@ -311,12 +312,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     GAME_STATES[chat_id]['words_to_win'] = words_to_win
                     del context.user_data['next_step'] # finish game settings 
                     GAME_STATES[chat_id]['in_game'] = True
-                    await update.message.reply_text("Game settings are complete! Let's start the game.")
+                    await update.message.reply_text("✅ Game settings are complete!")
                     await start_round(update, context)
                 else:
-                    await update.message.reply_text("The number of words needed to win must be a positive number. Please try again.")
+                    await update.message.reply_text("🚫 The number of words must be a positive number. Try again:")
             except ValueError:
-                await update.message.reply_text("This is not a number. Please enter the number of explained words needed to win:")
+                await update.message.reply_text("🚫 This is not a number. Try again:")
 
 async def set_difficulty(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Set up difficulty and suggest to choose the number of teams."""
