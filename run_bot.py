@@ -36,16 +36,19 @@ async def show_final_scores(update: Update, context: ContextTypes.DEFAULT_TYPE, 
 
     game_state = GAME_STATES[chat_id]
 
-    scores_text = "--- **Final Score** ---\n"
+    scores_text = "🏁 *Final Scoreboard* 🏁\n\n"
+
     for team_name, score in game_state['total_scores'].items():
-        scores_text += f"**{team_name}**: {score} points\n"
-    scores_text += "-----------------------\n"
+        scores_text += f"👥 *{team_name}*: *{score}* points 🏅\n"
+
+    scores_text += "\n🥇 Congratulations to the winning team\! 🎉"
 
     await context.bot.send_message(
         chat_id=chat_id,
         text=scores_text,
-        parse_mode='Markdown'
+        parse_mode=ParseMode.MARKDOWN_V2
     )
+
     # clean the state 
     GAME_STATES[chat_id] = DEFAULT_GAME_STATE.copy()
 
@@ -53,7 +56,8 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         chat_id = update.effective_chat.id
         GAME_STATES[chat_id] = DEFAULT_GAME_STATE.copy()
         await update.message.reply_text(
-            "Game canceled. You can start a new game with /start."
+            "⛔ Game canceled.\n" 
+            "You can start a new game with /start."
     )
 
 async def end_round(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id: int = None) -> None:
@@ -90,8 +94,11 @@ async def end_round(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id:
             game_state['in_game'] = False # game is finished 
             await context.bot.send_message(
                 chat_id=chat_id,
-                text=f"**WIN!!!** Team **{team['name']}** achieved {team['score']} points and won!",
-                parse_mode='Markdown'
+                text = (
+                    f"🏆 *WIN\\!\\!* 🎉\n\n"
+                    f"Team *{team['name']}* reached *{team['score']}* points and won the game\\! 🥳"
+                ),
+                parse_mode=ParseMode.MARKDOWN_V2
             )
             await show_final_scores(update, context, chat_id)
             return
@@ -104,9 +111,9 @@ async def end_round(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id:
     reply_markup = InlineKeyboardMarkup(keyboard)
     await context.bot.send_message(
         chat_id=chat_id,
-        text=f"Get ready, it's the next turn for team: **{game_state['teams'][game_state['current_team_index']]['name']}**",
+        text=f"🏃The next turn for team: **{game_state['teams'][game_state['current_team_index']]['name']}**",
         reply_markup=reply_markup,
-        parse_mode='Markdown'
+        parse_mode=ParseMode.MARKDOWN_V2
     )
 
 
@@ -118,7 +125,7 @@ async def handle_word_action(update: Update, context: ContextTypes.DEFAULT_TYPE)
     game_state = GAME_STATES[chat_id]
 
     if not game_state['in_game']:
-        await query.edit_message_text("Game is not active.")
+        await query.edit_message_text("❌ Game is not active.")
         return
 
     action = query.data
@@ -237,10 +244,6 @@ async def start_round(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         text = ( f"🚨 The round for team *{current_team['name']}* is starting\\! \n"
                  f"⏳ You have *{game_state['round_time']}* seconds\\. \n\n" 
                  f"🚀🚀🚀 *Get ready\\! 🚀🚀🚀*\n"
-                 f"⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️ \n"
-                 f"⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️ \n"
-                 f"⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️ \n"
-                 f"⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️ \n"
                  f"⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️ \n" ),
         parse_mode=ParseMode.MARKDOWN_V2
     )
