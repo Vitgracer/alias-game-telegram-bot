@@ -265,9 +265,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     context.user_data['current_team_naming_index'] = 0
                     context.user_data['next_step'] = 'set_team_names'
                 else:
-                    await update.message.reply_text("Please enter a number between 2 and 4.")
+                    await update.message.reply_text("🚫 Please enter a number between 2 and 4.")
             except ValueError:
-                await update.message.reply_text("That's not a number. Please enter the number of teams (2 to 4).")
+                await update.message.reply_text("🚫 That's not a number. Try again!")
 
         elif step == 'set_team_names':
             current_index = context.user_data['current_team_naming_index']
@@ -288,7 +288,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     )
                     context.user_data['next_step'] = 'set_round_time'
             else:
-                await update.message.reply_text("The team name cannot be empty. Please try again.")
+                await update.message.reply_text("🚫 The team name cannot be empty. Please try again.")
 
         elif step == 'set_round_time':
             try:
@@ -328,7 +328,7 @@ async def set_difficulty(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     GAME_STATES[chat_id]['words'] = load_words(GAME_STATES[chat_id]['language'], difficulty, LOGGER)
 
     await query.edit_message_text(
-        "Great! Now enter the number of teams (from 2 to 4):"
+        "🧑‍🤝‍🧑 Enter the number of teams (from 2 to 4):"
     )
     context.user_data['next_step'] = 'set_num_teams'
 
@@ -347,8 +347,7 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text(
-        f"✅ You have chosen the {lang_code.upper()} language.\n"
-        "🎯 Now select the difficulty level:",
+        "🎯 Select the difficulty level:",
         reply_markup=reply_markup
     )
 
