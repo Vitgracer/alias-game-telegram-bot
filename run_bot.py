@@ -1,5 +1,6 @@
 import time
 import random 
+import asyncio
 from telegram.constants import ParseMode
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -232,9 +233,16 @@ async def start_round(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         chat_id=chat_id,
         text = ( f"🚨 The round for team *{current_team['name']}* is starting\\! \n"
                  f"⏳ You have *{game_state['round_time']}* seconds\\. \n\n" 
-                 f"🚀🚀🚀 *Get ready\\! 🚀🚀🚀*" ),
+                 f"🚀🚀🚀 *Get ready\\! 🚀🚀🚀*\n"
+                 f"⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️ \n"
+                 f"⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️ \n"
+                 f"⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️ \n"
+                 f"⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️ \n"
+                 f"⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️ \n" ),
         parse_mode=ParseMode.MARKDOWN_V2
     )
+
+    await asyncio.sleep(3)
 
     # current round status is set to zero 
     game_state['explained_words_count'] = 0
