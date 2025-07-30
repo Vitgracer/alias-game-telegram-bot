@@ -166,7 +166,7 @@ async def update_timer(context: ContextTypes.DEFAULT_TYPE) -> None:
             await context.bot.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
-                text="⏰⏰⏰ *{game_state['round_time']}* seconds left ⏰⏰⏰",
+                text=f"⏰⏰⏰ *{remaining_time}* seconds left ⏰⏰⏰",
                 parse_mode=ParseMode.MARKDOWN_V2
             )
         except Exception as e:
