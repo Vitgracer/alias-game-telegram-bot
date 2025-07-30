@@ -76,14 +76,24 @@ async def end_round(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id:
     current_team['score'] += score_this_round
     game_state['total_scores'][current_team['name']] += score_this_round
 
+    explained_text = "\n".join(
+        [f"✅ *{w}* \\(_{t}_\\)" for w, t in game_state["explained_words"]]
+    ) or "—"
+    
+    skipped_text = "\n".join(
+        [f"❌ *{w}* \\(_{t}_\\)" for w, t in game_state['skipped_words']]
+    ) or "—"
+
     await context.bot.send_message(
         chat_id=chat_id,
         text=(
             f"⏹️ *Round for team* *{current_team['name']}* *is over\\!* \n"
-            f"✅ *Words explained:* {game_state['explained_words_count']} \n"
+            f"👍 *Words explained:* {game_state['explained_words_count']} \n"
             f"❌ *Words skipped:* {game_state['skipped_words_count']} \n"
             f"🏅 *Points this round:* {score_this_round} \n"
-            f"📊 *Total score for team* *{current_team['name']}*: {current_team['score']} \n"
+            f"📊 *Total score for team* *{current_team['name']}*: {current_team['score']} \n\n"
+            f"*Explained words:* \n{explained_text}\n\n"
+            f"*Skipped words:* \n{skipped_text}"
         ),
         parse_mode=ParseMode.MARKDOWN_V2
     )
@@ -130,10 +140,14 @@ async def handle_word_action(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     action = query.data
 
+    current_word = list(game_state["current_round_words"].items())[game_state["current_word_index"]]
+
     if action == 'word_explained':
         game_state['explained_words_count'] += 1
+        game_state["explained_words"].append(current_word)
     elif action == 'word_skipped':
         game_state['skipped_words_count'] += 1
+        game_state["skipped_words"].append(current_word)
 
     game_state['current_word_index'] += 1
 
@@ -253,6 +267,8 @@ async def start_round(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     # current round status is set to zero 
     game_state['explained_words_count'] = 0
     game_state['skipped_words_count'] = 0
+    game_state['explained_words'] = []
+    game_state['skipped_words'] = []
     all_words = list(game_state['words'].keys())
     sampled_words = random.sample(all_words, k=min(len(all_words), 50))
     round_words_dict = {k: game_state['words'][k] for k in sampled_words}
