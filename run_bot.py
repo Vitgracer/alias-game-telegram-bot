@@ -57,7 +57,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def end_round(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id: int = None) -> None:
     """ Finish round and move to the next one """
-    if chat_id is None: # If call not fron the force function 
+    if chat_id is None: # If call not from the force function 
         chat_id = update.effective_chat.id
 
     game_state = GAME_STATES[chat_id]
@@ -145,7 +145,7 @@ async def end_round_force(chat_id: int, context: ContextTypes.DEFAULT_TYPE) -> N
     if game_state['in_game']:
         await context.bot.send_message(
             chat_id=chat_id,
-            text="Time's up!"
+            text="⌛️ Time's up!"
         )
         await end_round(None, context, chat_id=chat_id)
 
@@ -166,7 +166,8 @@ async def update_timer(context: ContextTypes.DEFAULT_TYPE) -> None:
             await context.bot.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
-                text=f"{remaining_time} seconds left"
+                text="⏰⏰⏰ *{game_state['round_time']}* seconds left ⏰⏰⏰",
+                parse_mode=ParseMode.MARKDOWN_V2
             )
         except Exception as e:
             LOGGER.warning(f"Error while updating the timer message: {e}")
@@ -184,7 +185,8 @@ async def start_timer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     # first timer message
     timer_message = await context.bot.send_message(
         chat_id=chat_id,
-        text=f"{game_state['round_time']} seconds left"
+        text=f"⏰⏰⏰ *{game_state['round_time']}* seconds left ⏰⏰⏰",
+        parse_mode=ParseMode.MARKDOWN_V2
     )
     game_state['round_timer_message_id'] = timer_message.message_id
 
@@ -222,15 +224,16 @@ async def start_round(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     game_state = GAME_STATES[chat_id]
 
     if not game_state['in_game']:
-        await update.message.reply_text("The game hasn't started yet. Use /start to begin.")
+        await update.message.reply_text("❌ The game hasn't started yet. Use /start to begin.")
         return
 
     current_team = game_state['teams'][game_state['current_team_index']]
     await context.bot.send_message(
         chat_id=chat_id,
-        text=f"The round for team **{current_team['name']}** is starting!\n"
-             f"You have {game_state['round_time']} seconds. Get ready!",
-        parse_mode='Markdown'
+        text = ( f"🚨 The round for team *{current_team['name']}* is starting\\! \n"
+                 f"⏳ You have *{game_state['round_time']}* seconds\\. \n\n" 
+                 f"🚀🚀🚀 *Get ready\\! 🚀🚀🚀*" ),
+        parse_mode=ParseMode.MARKDOWN_V2
     )
 
     # current round status is set to zero 
@@ -245,7 +248,6 @@ async def start_round(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     game_state['timer_start_time'] = time.time()
     await start_timer(update, context)
     await show_next_word(update, context)
-    
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Here we process messages from the user depending on the current state"""
