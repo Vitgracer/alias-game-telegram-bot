@@ -74,12 +74,14 @@ async def end_round(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id:
 
     await context.bot.send_message(
         chat_id=chat_id,
-        text=f"Round for **{current_team['name']}** is over!\n"
-             f"Words explained: {game_state['explained_words_count']}\n"
-             f"Words skipped: {game_state['skipped_words_count']}\n"
-             f"Points this round: {score_this_round}\n"
-             f"Total score for team **{current_team['name']}**: {current_team['score']}\n\n",
-        parse_mode='Markdown'
+        text=(
+            f"⏹️ *Round for team* *{current_team['name']}* *is over\\!* \n"
+            f"✅ *Words explained:* {game_state['explained_words_count']} \n"
+            f"❌ *Words skipped:* {game_state['skipped_words_count']} \n"
+            f"🏅 *Points this round:* {score_this_round} \n"
+            f"📊 *Total score for team* *{current_team['name']}*: {current_team['score']} \n"
+        ),
+        parse_mode=ParseMode.MARKDOWN_V2
     )
 
     # win? 
@@ -214,9 +216,10 @@ async def show_next_word(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     reply_markup = InlineKeyboardMarkup(keyboard)
     await context.bot.send_message(
         chat_id=chat_id,
-        text=f"**{word}** ({translate})",
+        text = f"📝📝📝 *{word}* 📝📝📝 \n\n"
+               f"🌐 Translation: \\(_{translate}_\\)",
         reply_markup=reply_markup,
-        parse_mode='Markdown'
+        parse_mode=ParseMode.MARKDOWN_V2
     )
 
 async def start_round(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
