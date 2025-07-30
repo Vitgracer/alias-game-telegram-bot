@@ -9,6 +9,16 @@ A fast-paced, language-learning, party-packed **Alias-style game bot** for Teleg
 Written just for fun and perfect for practicing **German** and **English** vocabulary with friends or family!
 
 ---
+## 🤖 Demo
+**Round statistics**: 
+
+![Round statistics](resources/example_1.png)
+
+**Final statistics**:
+
+![Final statistics](resources/ex_2.png)
+
+---
 
 ## 🤖 What is TalkFast?
 
